@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Rapidpay.API.Middlewares;
+using Rapidpay.API.Mocks;
 using Rapidpay.Business.Interfaces;
 using Rapidpay.Business.Services;
 using Rapidpay.Data;
@@ -75,5 +76,7 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"Error de conexión: {ex.Message}");
     }
 }
+
+await PopulateDb.FillDb(app);
 
 app.Run();
