@@ -60,7 +60,7 @@ public class CardsController : ControllerBase
     public async Task<ActionResult<IEnumerable<Card>>> GetUserCards()
     {
         
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
         var cards = await _cardService.GetCardsByUserIdAsync(userId);
         return Ok(cards);
     }
