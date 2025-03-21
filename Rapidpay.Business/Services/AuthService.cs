@@ -7,6 +7,7 @@ using System.Text;
 using Rapidpay.Data.Models;
 using Rapidpay.Business.Interfaces;
 using Rapidpay.Data.Interfaces;
+using System.Threading.Tasks;
 
 public class AuthService : IAuthService
 {   
@@ -43,7 +44,7 @@ public class AuthService : IAuthService
         var response = new AuthResponse
         {
             Username = user.Username,
-            Token = GenerateJwtToken(user.Username),
+            Token = GenerateJwtToken(user),
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes)
         };
@@ -108,14 +109,14 @@ public class AuthService : IAuthService
         var authResponse = new AuthResponse
         {
             Username = user.Username,
-            Token = GenerateJwtToken(user.Username),
+            Token = GenerateJwtToken(user),
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes)
         };
         return authResponse;
     }
 
-    private string GenerateJwtToken(string username)
+    private string GenerateJwtToken(User user)
     {
         var jwtSettings = _configuration.GetSection("Jwt");
         var key = jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not configured");
@@ -123,7 +124,9 @@ public class AuthService : IAuthService
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, username),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Role, user.UserType.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

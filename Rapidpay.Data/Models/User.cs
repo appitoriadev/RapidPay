@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Npgsql.TypeMapping;
 
 namespace Rapidpay.Data.Models;
 
@@ -21,6 +22,12 @@ public class User : BaseEntity<int>
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
-    
+    [Required]
+    public UserType UserType {get; set;}
     public virtual ICollection<Card> Cards { get; set; } = new List<Card>();
 } 
+
+public enum UserType {
+    User,
+    Admin
+}
