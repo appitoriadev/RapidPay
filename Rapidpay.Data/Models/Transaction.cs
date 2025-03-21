@@ -5,7 +5,7 @@ namespace Rapidpay.Data.Models;
 public class Transaction : BaseEntity<int>
 {
     [Required]
-    public required Card Card { get; set; }
+    public int CardId { get; set; }
     
     [Required]
     [Range(0.01, double.MaxValue)]

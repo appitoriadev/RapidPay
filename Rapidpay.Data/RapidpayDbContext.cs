@@ -14,7 +14,6 @@ public class RapidpayDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Card> Cards { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
-    public DbSet<AuthResponse> AuthResponses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,22 +39,17 @@ public class RapidpayDbContext : DbContext
             .IsUnique();
 
         modelBuilder.Entity<Card>()
-            .HasOne(c => c.User)
+            .HasOne<User>()
             .WithMany(u => u.Cards)
-            .HasForeignKey(c => c.Id)
+            .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Transaction>()
-            .HasOne(t => t.Card)
+            .HasOne<Card>()
             .WithMany()
-            .HasForeignKey(t => t.Id)
+            .HasForeignKey(t => t.CardId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<AuthResponse>()
-            .HasIndex(a => a.Token)
-            .IsUnique();
-
         base.OnModelCreating(modelBuilder);
-
     }
 } 

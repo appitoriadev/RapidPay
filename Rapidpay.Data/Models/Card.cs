@@ -5,7 +5,7 @@ namespace Rapidpay.Data.Models;
 public class Card: BaseEntity<int>
 {
     [Required]
-    public required User User { get; set; }
+    public int UserId { get; set; }
     
     [Required]
     [StringLength(16, MinimumLength = 16)]
@@ -32,4 +32,20 @@ public class Card: BaseEntity<int>
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastUsedAt { get; set; }
-} 
+
+    public CardType CardType { get; set; }
+    public CardBrand CardBrand { get; set; }
+}
+
+public enum CardType
+{
+    Debit,
+    Credit
+}
+
+public enum CardBrand
+{
+    Visa,
+    Mastercard,
+    AmericanExpress,
+}
