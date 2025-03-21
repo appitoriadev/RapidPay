@@ -28,7 +28,7 @@ public class TransactionsController : ControllerBase
         var userId = int.Parse(userIdClaim);
         
         // Verify that the card belongs to the user
-        var card = await _cardService.GetCardByIdAsync(transaction.Id);
+        var card = await _cardService.GetCardByIdAsync(transaction.CardId);
         if (card == null || card.Id != userId)
         {
             return Forbid();
@@ -71,7 +71,7 @@ public class TransactionsController : ControllerBase
         
         // Verify that the card belongs to the user
         var card = await _cardService.GetCardByIdAsync(cardId);
-        if (card == null || card.Id != userId)
+        if (card == null || card.UserId != userId)
         {
             return Forbid();
         }
@@ -95,8 +95,8 @@ public class TransactionsController : ControllerBase
         }
 
         // Verify that the card belongs to the user
-        var card = await _cardService.GetCardByIdAsync(transaction.Id);
-        if (card == null || card.Id != userId)
+        var card = await _cardService.GetCardByIdAsync(transaction.CardId);
+        if (card == null || card.UserId != userId)
         {
             return Forbid();
         }

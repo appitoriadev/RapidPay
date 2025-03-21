@@ -52,6 +52,7 @@ where TEntity : BaseEntity<Tid>
     public virtual async Task AddAsync(TEntity entity)
     {
         await _dbSet.AddAsync(entity);
+        await _context.SaveChangesAsync();
     }
 
     public virtual async Task Delete(TEntity entity)

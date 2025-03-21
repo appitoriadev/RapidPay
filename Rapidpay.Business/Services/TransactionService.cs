@@ -1,41 +1,44 @@
 using Microsoft.EntityFrameworkCore;
 using Rapidpay.Business.Interfaces;
 using Rapidpay.Data;
+using Rapidpay.Data.Interfaces;
 using Rapidpay.Data.Models;
 
 namespace Rapidpay.Business.Services;
 
 public class TransactionService : ITransactionService
 {
-    private readonly RapidpayDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ICardService _cardService;
 
-    public TransactionService(RapidpayDbContext context, ICardService cardService)
+    public TransactionService(IUnitOfWork unitOfWork, ICardService cardService)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _cardService = cardService;
     }
 
     public async Task<Transaction> CreateTransactionAsync(Transaction transaction)
     {
         transaction.Status = TransactionStatus.Pending;
-        _context.Transactions.Add(transaction);
-        await _context.SaveChangesAsync();
+        await _unitOfWork.TransactionRepository.AddAsync(transaction);
+        await _unitOfWork.SaveAsync();
         return transaction;
     }
 
     public async Task<Transaction?> GetTransactionByIdAsync(int id)
     {
-        return await _context.Transactions
-            .FirstOrDefaultAsync(t => t.Id == id);
+        return await _unitOfWork.TransactionRepository.FindAsync(id);
     }
 
     public async Task<IEnumerable<Transaction>> GetTransactionsByCardIdAsync(int cardId)
     {
-        return await _context.Transactions
-            .Where(t => t.CardId == cardId)
-            .OrderByDescending(t => t.CreatedAt)
-            .ToListAsync();
+        var transactions = await _unitOfWork.TransactionRepository
+            .GetAllAsync(
+                filter: t => t.CardId == cardId,
+                orderBy: q => q.OrderByDescending(t => t.CreatedAt)
+            );
+        
+        return transactions;
     }
 
     public async Task<Transaction> ProcessTransactionAsync(Transaction transaction)
@@ -49,7 +52,7 @@ public class TransactionService : ITransactionService
         transaction.Status = TransactionStatus.Completed;
         transaction.CompletedAt = DateTime.UtcNow;
         
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveAsync();
         return transaction;
     }
 } 
