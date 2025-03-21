@@ -13,13 +13,20 @@ public class RapidpayDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Card> Cards { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
-    public DbSet<OAuthClient> OAuthClients { get; set; }
-    public DbSet<OAuthToken> OAuthTokens { get; set; }
-    public DbSet<OAuthAuthorizationCode> OAuthAuthorizationCodes { get; set; }
+    // public DbSet<OAuthClient> OAuthClients { get; set; }
+    // public DbSet<OAuthToken> OAuthTokens { get; set; }
+    // public DbSet<OAuthAuthorizationCode> OAuthAuthorizationCodes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
+        if(modelBuilder == null)
+        {
+            return;
+        }
+
+        modelBuilder.Entity<User>().ToTable("User").HasKey(k => k.Id);
+        modelBuilder.Entity<Card>().ToTable("Card").HasKey(k => k.Id);
+        modelBuilder.Entity<Transaction>().ToTable("Transaction").HasKey(k => k.Id);
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
@@ -36,29 +43,31 @@ public class RapidpayDbContext : DbContext
         modelBuilder.Entity<Card>()
             .HasOne(c => c.User)
             .WithMany(u => u.Cards)
-            .HasForeignKey(c => c.UserId)
+            .HasForeignKey(c => c.Id)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Transaction>()
             .HasOne(t => t.Card)
             .WithMany()
-            .HasForeignKey(t => t.CardId)
+            .HasForeignKey(t => t.Id)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<OAuthClient>()
-            .HasIndex(c => c.ClientId)
-            .IsUnique();
+        base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<OAuthAuthorizationCode>()
-            .HasIndex(c => c.Code)
-            .IsUnique();
+        // modelBuilder.Entity<OAuthClient>()
+        //     .HasIndex(c => c.ClientId)
+        //     .IsUnique();
 
-        modelBuilder.Entity<OAuthToken>()
-            .HasIndex(t => t.AccessToken)
-            .IsUnique();
+        // modelBuilder.Entity<OAuthAuthorizationCode>()
+        //     .HasIndex(c => c.Code)
+        //     .IsUnique();
 
-        modelBuilder.Entity<OAuthToken>()
-            .HasIndex(t => t.RefreshToken)
-            .IsUnique();
+        // modelBuilder.Entity<OAuthToken>()
+        //     .HasIndex(t => t.AccessToken)
+        //     .IsUnique();
+
+        // modelBuilder.Entity<OAuthToken>()
+        //     .HasIndex(t => t.RefreshToken)
+        //     .IsUnique();
     }
 } 

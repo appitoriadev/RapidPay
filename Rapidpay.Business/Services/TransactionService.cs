@@ -10,6 +10,7 @@ public class TransactionService : ITransactionService
     private readonly RapidpayDbContext _context;
     private readonly ICardService _cardService;
 
+
     public TransactionService(RapidpayDbContext context, ICardService cardService)
     {
         _context = context;
@@ -35,23 +36,20 @@ public class TransactionService : ITransactionService
     {
         return await _context.Transactions
             .Include(t => t.Card)
-            .Where(t => t.CardId == cardId)
+            .Where(t => t.Id == cardId)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
     }
 
     public async Task<Transaction> ProcessTransactionAsync(Transaction transaction)
     {
-        // In a real application, this would integrate with a payment processor
-        // For now, we'll simulate a successful transaction
-        transaction.Status = TransactionStatus.Completed;
-        transaction.CompletedAt = DateTime.UtcNow;
-        
-        var card = await _cardService.GetCardByIdAsync(transaction.CardId);
-        if (card != null)
-        {
-            card.LastUsedAt = DateTime.UtcNow;
-        }
+        // Get card with lock
+        var card = await _cardRepository.GetForUpdateAsync(transaction.Id);
+        if (card == null)
+            throw new InvalidOperationException("Card not found");
+
+        // Process transaction
+        // ... transaction logic ...
 
         await _context.SaveChangesAsync();
         return transaction;

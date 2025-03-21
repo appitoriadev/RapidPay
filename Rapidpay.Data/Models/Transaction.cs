@@ -2,13 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Rapidpay.Data.Models;
 
-public class Transaction
+public class Transaction : BaseEntity<int>
 {
-    public int Id { get; set; }
-    
     [Required]
-    public int CardId { get; set; }
-    public Card Card { get; set; }
+    public required Card Card { get; set; }
     
     [Required]
     [Range(0.01, double.MaxValue)]
@@ -16,10 +13,10 @@ public class Transaction
     
     [Required]
     [StringLength(3, MinimumLength = 3)]
-    public string Currency { get; set; }
+    public required string Currency { get; set; }
     
     [Required]
-    public TransactionStatus Status { get; set; }
+    public required TransactionStatus Status { get; set; }
     
     public string? Description { get; set; }
     

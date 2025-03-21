@@ -1,21 +1,22 @@
+using System.ComponentModel.DataAnnotations;
 namespace Rapidpay.Data.Models;
 
-public class LoginRequest
+public class LoginRequest: BaseEntity<int>
 {
-    public string Username { get; set; }
-    public string Password { get; set; }
+    [Required]
+    public required string Username { get; set; }
+    [Required]
+    public required string Password { get; set; }
 }
 
-public class RegisterRequest
+public class AuthResponse: BaseEntity<int>
 {
-    public string Username { get; set; }
-    public string Email { get; set; }
-    public string Password { get; set; }
-}
-
-public class AuthResponse
-{
-    public string Token { get; set; }
-    public string Username { get; set; }
-    public DateTime ExpiresAt { get; set; }
+    [Required]
+    public required string Token { get; set; }
+    [Required]
+    public required string RefreshToken { get; set; }
+    [Required]
+    public required string Username { get; set; }
+    [Required]
+    public required DateTime ExpiresAt { get; set; }
 } 

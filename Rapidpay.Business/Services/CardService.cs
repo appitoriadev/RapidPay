@@ -34,7 +34,7 @@ public class CardService : ICardService
     public async Task<IEnumerable<Card>> GetCardsByUserIdAsync(int userId)
     {
         return await _context.Cards
-            .Where(c => c.UserId == userId)
+            .Where(c => c.Id == userId)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
     }

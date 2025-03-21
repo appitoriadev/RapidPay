@@ -1,117 +1,114 @@
+namespace Rapidpay.Business.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using Rapidpay.Business.Interfaces;
-using Rapidpay.Data;
 using Rapidpay.Data.Models;
-
-namespace Rapidpay.Business.Services;
+using Rapidpay.Business.Interfaces;
+using Rapidpay.Data.Interfaces;
 
 public class AuthService : IAuthService
-{
-    private readonly RapidpayDbContext _context;
+{   
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _configuration;
 
-    public AuthService(RapidpayDbContext context, IConfiguration configuration)
+    public AuthService(IUnitOfWork unitOfWork, IConfiguration configuration)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _configuration = configuration;
     }
 
-    public async Task<AuthResponse> LoginAsync(LoginRequest request)
+    public async Task<AuthResponse> Register(User user)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-        if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
-        {
-            throw new InvalidOperationException("Invalid username or password");
-        }
+        var existingUser = await _unitOfWork.UserRepository.FindAsync(user.Id);
+        if (existingUser != null)
+            throw new InvalidOperationException("User already exists");
 
-        user.LastLoginAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        var token = GenerateJwtToken(user);
-        return new AuthResponse
+        var newUser = new User
         {
-            Token = token,
             Username = user.Username,
-            ExpiresAt = DateTime.UtcNow.AddDays(7)
-        };
-    }
-
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
-    {
-        if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-        {
-            throw new InvalidOperationException("Username already exists");
-        }
-
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-        {
-            throw new InvalidOperationException("Email already exists");
-        }
-
-        var user = new User
-        {
-            Username = request.Username,
-            Email = request.Email,
-            PasswordHash = HashPassword(request.Password)
+            Email = user.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash),
+            CreatedAt = DateTime.UtcNow,
+            LastLoginAt = DateTime.UtcNow
         };
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-
-        var token = GenerateJwtToken(user);
-        return new AuthResponse
+        var response = new AuthResponse
         {
-            Token = token,
             Username = user.Username,
-            ExpiresAt = DateTime.UtcNow.AddDays(7)
+            Token = GenerateJwtToken(user.Username),
+            RefreshToken = GenerateRefreshToken(),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpirationMinutes"]))
         };
+        await _unitOfWork.UserRepository.AddAsync(newUser);
+        await _unitOfWork.SaveAsync();
+
+        return response;
+    }
+    public async Task<AuthResponse?> Login(LoginRequest request)
+    {
+        var user = await _unitOfWork.UserRepository.GetAllAsync(u => u.Username == request.Username);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.First().PasswordHash))
+            throw new InvalidOperationException("Invalid password");
+
+        return GenerateAuthResponse(user.First());
     }
 
-    public async Task<User?> GetUserByIdAsync(int id)
+    public async Task<AuthResponse?> RefreshToken(string refreshToken)
     {
-        return await _context.Users.FindAsync(id);
+        var user = await _unitOfWork.UserRepository.GetAllAsync(u => u.RefreshToken == refreshToken);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+
+        if (user.First().RefreshTokenExpiry < DateTime.UtcNow)
+            throw new InvalidOperationException("Refresh token expired");
+
+        return GenerateAuthResponse(user.First());
     }
 
-    public async Task<User?> GetUserByUsernameAsync(string username)
+    private async Task<AuthResponse> GenerateAuthResponse(User user)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        var authResponse = new AuthResponse
+        {
+            Username = user.Username,
+            Token = GenerateJwtToken(user.Username),
+            RefreshToken = GenerateRefreshToken(),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpirationMinutes"]))
+        };
+        return authResponse;
     }
-
-    private string GenerateJwtToken(User user)
+    private string GenerateJwtToken(string username)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+        var jwtSettings = _configuration.GetSection("Jwt");
+        var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, username),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        var key = new SymmetricSecurityKey(secretKey);
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Email, user.Email)
-        };
+        var expires = DateTime.UtcNow.AddMinutes(int.Parse(jwtSettings["ExpirationMinutes"]));
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: jwtSettings["Issuer"],
+            audience: jwtSettings["Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
-            signingCredentials: credentials
-        );
+            expires: expires,
+            signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private string HashPassword(string password)
+    private string GenerateRefreshToken()
     {
-        return BCrypt.Net.BCrypt.HashPassword(password);
+        return Convert.ToBase64String(Guid.NewGuid().ToByteArray());
     }
 
-    private bool VerifyPassword(string password, string hash)
-    {
-        return BCrypt.Net.BCrypt.Verify(password, hash);
-    }
-} 
+}
