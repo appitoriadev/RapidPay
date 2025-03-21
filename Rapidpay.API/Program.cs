@@ -6,7 +6,7 @@ using Rapidpay.API.Middlewares;
 using Rapidpay.Business.Interfaces;
 using Rapidpay.Business.Services;
 using Rapidpay.Data;
-using Rapidpay.Data.Models;
+using Rapidpay.Data.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,26 +18,30 @@ builder.Services.AddSwaggerGen();
 
 // Add DbContext
 builder.Services.AddDbContext<RapidpayDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("RapidPayDbConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("RapidPayDbConnection")));
 
-// Configure JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+builder.Services.AddAuthentication(options => {
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options => {
+    options.RequireHttpsMetadata = false; //Enable in production
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
-        };
-    });
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+    };
+}); 
 
 // Add Business Services
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICardService, CardService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
@@ -57,5 +61,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<RapidpayDbContext>();
+    try
+    {
+        await context.Database.CanConnectAsync();
+        Console.WriteLine("Conexión exitosa a la base de datos");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error de conexión: {ex.Message}");
+    }
+}
 
 app.Run();
