@@ -16,11 +16,11 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
+    public async Task<ActionResult<AuthResponse>> Register(User user)
     {
         try
         {
-            var response = await _authService.RegisterAsync(request);
+            var response = await _authService.Register(user);
             return Ok(response);
         }
         catch (InvalidOperationException ex)
@@ -34,7 +34,7 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var response = await _authService.LoginAsync(request);
+            var response = await _authService.Login(request);
             return Ok(response);
         }
         catch (InvalidOperationException ex)

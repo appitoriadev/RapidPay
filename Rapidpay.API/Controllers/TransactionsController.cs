@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace Rapidpay.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = "User")]
 [ApiController]
 [Route("api/[controller]")]
 public class TransactionsController : ControllerBase
@@ -23,11 +23,13 @@ public class TransactionsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Transaction>> CreateTransaction(Transaction transaction)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            ?? throw new InvalidOperationException("User ID claim not found");
+        var userId = int.Parse(userIdClaim);
         
         // Verify that the card belongs to the user
-        var card = await _cardService.GetCardByIdAsync(transaction.CardId);
-        if (card == null || card.UserId != userId)
+        var card = await _cardService.GetCardByIdAsync(transaction.Id);
+        if (card == null || card.Id != userId)
         {
             return Forbid();
         }
@@ -39,7 +41,10 @@ public class TransactionsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<Transaction>> GetTransaction(int id)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            ?? throw new InvalidOperationException("User ID claim not found");
+        var userId = int.Parse(userIdClaim);
+        
         var transaction = await _transactionService.GetTransactionByIdAsync(id);
         
         if (transaction == null)
@@ -48,8 +53,8 @@ public class TransactionsController : ControllerBase
         }
 
         // Verify that the card belongs to the user
-        var card = await _cardService.GetCardByIdAsync(transaction.CardId);
-        if (card == null || card.UserId != userId)
+        var card = await _cardService.GetCardByIdAsync(transaction.Id);
+        if (card == null || card.Id != userId)
         {
             return Forbid();
         }
@@ -60,11 +65,13 @@ public class TransactionsController : ControllerBase
     [HttpGet("card/{cardId}")]
     public async Task<ActionResult<IEnumerable<Transaction>>> GetTransactionsByCard(int cardId)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            ?? throw new InvalidOperationException("User ID claim not found");
+        var userId = int.Parse(userIdClaim);
         
         // Verify that the card belongs to the user
         var card = await _cardService.GetCardByIdAsync(cardId);
-        if (card == null || card.UserId != userId)
+        if (card == null || card.Id != userId)
         {
             return Forbid();
         }
@@ -76,7 +83,10 @@ public class TransactionsController : ControllerBase
     [HttpPost("{id}/process")]
     public async Task<ActionResult<Transaction>> ProcessTransaction(int id)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            ?? throw new InvalidOperationException("User ID claim not found");
+        var userId = int.Parse(userIdClaim);
+        
         var transaction = await _transactionService.GetTransactionByIdAsync(id);
         
         if (transaction == null)
@@ -85,8 +95,8 @@ public class TransactionsController : ControllerBase
         }
 
         // Verify that the card belongs to the user
-        var card = await _cardService.GetCardByIdAsync(transaction.CardId);
-        if (card == null || card.UserId != userId)
+        var card = await _cardService.GetCardByIdAsync(transaction.Id);
+        if (card == null || card.Id != userId)
         {
             return Forbid();
         }
