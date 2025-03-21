@@ -8,14 +8,13 @@ public class RapidpayDbContext : DbContext
     public RapidpayDbContext(DbContextOptions<RapidpayDbContext> options)
         : base(options)
     {
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
 
     public DbSet<User> Users { get; set; }
     public DbSet<Card> Cards { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
-    // public DbSet<OAuthClient> OAuthClients { get; set; }
-    // public DbSet<OAuthToken> OAuthTokens { get; set; }
-    // public DbSet<OAuthAuthorizationCode> OAuthAuthorizationCodes { get; set; }
+    public DbSet<AuthResponse> AuthResponses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,22 +51,11 @@ public class RapidpayDbContext : DbContext
             .HasForeignKey(t => t.Id)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<AuthResponse>()
+            .HasIndex(a => a.Token)
+            .IsUnique();
+
         base.OnModelCreating(modelBuilder);
 
-        // modelBuilder.Entity<OAuthClient>()
-        //     .HasIndex(c => c.ClientId)
-        //     .IsUnique();
-
-        // modelBuilder.Entity<OAuthAuthorizationCode>()
-        //     .HasIndex(c => c.Code)
-        //     .IsUnique();
-
-        // modelBuilder.Entity<OAuthToken>()
-        //     .HasIndex(t => t.AccessToken)
-        //     .IsUnique();
-
-        // modelBuilder.Entity<OAuthToken>()
-        //     .HasIndex(t => t.RefreshToken)
-        //     .IsUnique();
     }
 } 
