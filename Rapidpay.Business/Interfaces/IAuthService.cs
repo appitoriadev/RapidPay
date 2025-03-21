@@ -13,5 +13,8 @@ public interface IAuthService
     Task<AuthResponse>Register(User user);
     Task<AuthResponse?>Login(LoginRequest request);
     Task<AuthResponse?>RefreshToken(string refreshToken);
-    // Task<bool>ValidateAccessToken(string accessToken);
+    Task<User?> GetUserByUsername(string username);
+    Task<User?> GetUserById(int id);
+    
+
 } 

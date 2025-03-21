@@ -83,6 +83,18 @@ public class AuthService : IAuthService
         return await GenerateAuthResponse(user);
     }
 
+    public async Task<User?> GetUserByUsername(string username)
+    {
+        var users = await _unitOfWork.UserRepository.GetAllAsync(u => u.Username == username);
+        return users.FirstOrDefault();
+    }
+
+    public async Task<User?> GetUserById(int id)
+    {
+        return await _unitOfWork.UserRepository.FindAsync(id);
+    }
+
+    #region Private Methods
     private async Task<AuthResponse> GenerateAuthResponse(User user)
     {
         var expirationMinutes = int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "30");
@@ -134,4 +146,5 @@ public class AuthService : IAuthService
     {
         return Convert.ToBase64String(Guid.NewGuid().ToByteArray());
     }
+    #endregion
 }
