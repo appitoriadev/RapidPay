@@ -25,66 +25,89 @@ public class AuthService : IAuthService
         if (existingUser != null)
             throw new InvalidOperationException("User already exists");
 
+        var refreshToken = GenerateRefreshToken();
+        var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+
         var newUser = new User
         {
             Username = user.Username,
             Email = user.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash),
             CreatedAt = DateTime.UtcNow,
-            LastLoginAt = DateTime.UtcNow
+            LastLoginAt = DateTime.UtcNow,
+            RefreshToken = refreshToken,
+            RefreshTokenExpiry = refreshTokenExpiry
         };
 
+        var expirationMinutes = int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "30");
         var response = new AuthResponse
         {
             Username = user.Username,
             Token = GenerateJwtToken(user.Username),
-            RefreshToken = GenerateRefreshToken(),
-            ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpirationMinutes"]))
+            RefreshToken = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes)
         };
+
         await _unitOfWork.UserRepository.AddAsync(newUser);
         await _unitOfWork.SaveAsync();
 
         return response;
     }
+
     public async Task<AuthResponse?> Login(LoginRequest request)
     {
-        var user = await _unitOfWork.UserRepository.GetAllAsync(u => u.Username == request.Username);
+        var users = await _unitOfWork.UserRepository.GetAllAsync(u => u.Username == request.Username);
+        var user = users.FirstOrDefault();
         if (user == null)
             throw new InvalidOperationException("User not found");
 
-        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.First().PasswordHash))
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new InvalidOperationException("Invalid password");
 
-        return GenerateAuthResponse(user.First());
+        user.LastLoginAt = DateTime.UtcNow;
+        await _unitOfWork.SaveAsync();
+
+        return await GenerateAuthResponse(user);
     }
 
     public async Task<AuthResponse?> RefreshToken(string refreshToken)
     {
-        var user = await _unitOfWork.UserRepository.GetAllAsync(u => u.RefreshToken == refreshToken);
+        var users = await _unitOfWork.UserRepository.GetAllAsync(u => u.RefreshToken == refreshToken);
+        var user = users.FirstOrDefault();
         if (user == null)
             throw new InvalidOperationException("User not found");
 
-        if (user.First().RefreshTokenExpiry < DateTime.UtcNow)
+        if (user.RefreshTokenExpiry < DateTime.UtcNow)
             throw new InvalidOperationException("Refresh token expired");
 
-        return GenerateAuthResponse(user.First());
+        return await GenerateAuthResponse(user);
     }
 
     private async Task<AuthResponse> GenerateAuthResponse(User user)
     {
+        var expirationMinutes = int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "30");
+        var refreshToken = GenerateRefreshToken();
+        var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiry = refreshTokenExpiry;
+        await _unitOfWork.SaveAsync();
+
         var authResponse = new AuthResponse
         {
             Username = user.Username,
             Token = GenerateJwtToken(user.Username),
-            RefreshToken = GenerateRefreshToken(),
-            ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpirationMinutes"]))
+            RefreshToken = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes)
         };
         return authResponse;
     }
+
     private string GenerateJwtToken(string username)
     {
         var jwtSettings = _configuration.GetSection("Jwt");
-        var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+        var key = jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not configured");
+        var secretKey = Encoding.UTF8.GetBytes(key);
 
         var claims = new List<Claim>
         {
@@ -92,9 +115,10 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        var key = new SymmetricSecurityKey(secretKey);
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expires = DateTime.UtcNow.AddMinutes(int.Parse(jwtSettings["ExpirationMinutes"]));
+        var securityKey = new SymmetricSecurityKey(secretKey);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        var expirationMinutes = int.Parse(jwtSettings["ExpirationMinutes"] ?? "30");
+        var expires = DateTime.UtcNow.AddMinutes(expirationMinutes);
 
         var token = new JwtSecurityToken(
             issuer: jwtSettings["Issuer"],
@@ -110,5 +134,4 @@ public class AuthService : IAuthService
     {
         return Convert.ToBase64String(Guid.NewGuid().ToByteArray());
     }
-
 }
