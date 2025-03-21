@@ -72,7 +72,8 @@ namespace Rapidpay.API.Middlewares
                 };
 
                 context.Response.ContentType = "application/problem+json";
-                context.Response.StatusCode = problemDetails.Status.Value;
+                context.Response.StatusCode = problemDetails.Status ?? (int)HttpStatusCode.InternalServerError;
+
                 
                 var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
                 await context.Response.WriteAsync(JsonSerializer.Serialize(problemDetails, options));
