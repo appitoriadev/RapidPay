@@ -6,6 +6,12 @@ public static class PopulateDb
 {
     public static async Task FillDb(WebApplication app)
     {
+        var config = app.Configuration;
+        if (!config.GetValue<bool>("DbPopulate"))
+        {
+            return;
+        }
+
         using (var scope = app.Services.CreateScope())
         {
             var cardService = scope.ServiceProvider.GetRequiredService<ICardService>();
@@ -17,6 +23,7 @@ public static class PopulateDb
                 Username = "John Doe",
                 Email = "john.doe@example.com",
                 PasswordHash = "password123",
+                UserType = Data.Models.UserType.Admin
             });
 
             await authService.Register(new Data.Models.User
@@ -24,6 +31,7 @@ public static class PopulateDb
                 Username = "Jane Doe",
                 Email = "jane.doe@example.com",
                 PasswordHash = "password345",
+                UserType = Data.Models.UserType.User
             });
 
 

@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 namespace Rapidpay.API.Controllers;
 
-[Authorize(Roles = "User")]
+
 [ApiController]
 [Route("api/[controller]")]
 public class CardsController : ControllerBase
@@ -19,6 +19,7 @@ public class CardsController : ControllerBase
         _cardService = cardService;
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<ActionResult<Card>> CreateCard(Card card)
     {
@@ -33,6 +34,7 @@ public class CardsController : ControllerBase
         return CreatedAtAction(nameof(GetCard), new { id = createdCard.Id }, createdCard);
     }
 
+    [Authorize(Roles = "User")]
     [HttpGet("{id}")]
     public async Task<ActionResult<Card>> GetCard(int id)
     {
@@ -56,6 +58,7 @@ public class CardsController : ControllerBase
         return Ok(card);
     }
 
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Card>>> GetUserCards()
     {
@@ -76,4 +79,11 @@ public class CardsController : ControllerBase
 
         return Ok(isValid);
     }
+
+    // [HttpGet("debug-claims")]
+    // public IActionResult DebugClaims()
+    // {
+    //     var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+    //     return Ok(claims);
+    // }
 }
