@@ -150,6 +150,9 @@ namespace Rapidpay.Data.Migrations
                     b.Property<DateTime?>("RefreshTokenExpiry")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int>("UserType")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)

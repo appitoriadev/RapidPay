@@ -12,7 +12,7 @@ using Rapidpay.Data;
 namespace Rapidpay.Data.Migrations
 {
     [DbContext(typeof(RapidpayDbContext))]
-    [Migration("20250321075256_InitialCreate")]
+    [Migration("20250321090536_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -152,6 +152,9 @@ namespace Rapidpay.Data.Migrations
 
                     b.Property<DateTime?>("RefreshTokenExpiry")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("UserType")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Username")
                         .IsRequired()
