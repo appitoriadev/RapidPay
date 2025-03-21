@@ -16,6 +16,9 @@ public class User : BaseEntity<int>
     [Required]
     public required string PasswordHash { get; set; }
     
+    public string? RefreshToken { get; set; }
+    public DateTime? RefreshTokenExpiry { get; set; }
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
     
