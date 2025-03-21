@@ -27,6 +27,9 @@ public class Card: BaseEntity<int>
     [StringLength(100)]
     public required string CardHolderName { get; set; }
     
+    [Required]
+    public decimal Balance { get; set; } = 0;
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastUsedAt { get; set; }
 } 
