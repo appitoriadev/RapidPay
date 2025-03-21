@@ -10,7 +10,6 @@ public class TransactionService : ITransactionService
     private readonly RapidpayDbContext _context;
     private readonly ICardService _cardService;
 
-
     public TransactionService(RapidpayDbContext context, ICardService cardService)
     {
         _context = context;
@@ -36,7 +35,7 @@ public class TransactionService : ITransactionService
     {
         return await _context.Transactions
             .Include(t => t.Card)
-            .Where(t => t.Id == cardId)
+            .Where(t => t.Card.Id == cardId)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
     }
@@ -44,13 +43,14 @@ public class TransactionService : ITransactionService
     public async Task<Transaction> ProcessTransactionAsync(Transaction transaction)
     {
         // Get card with lock
-        var card = await _cardRepository.GetForUpdateAsync(transaction.Id);
+        var card = await _cardService.GetCardByIdAsync(transaction.Card.Id);
         if (card == null)
             throw new InvalidOperationException("Card not found");
 
         // Process transaction
-        // ... transaction logic ...
-
+        transaction.Status = TransactionStatus.Completed;
+        transaction.CompletedAt = DateTime.UtcNow;
+        
         await _context.SaveChangesAsync();
         return transaction;
     }
